@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -32,6 +33,17 @@
       import ReactDOM from 'react-dom/client';
       import { GoogleGenAI, Type } from "@google/genai";
 
+      // --- Start of Polyfills ---
+      // Polyfill crypto.randomUUID for environments where it might not be available
+      if (typeof crypto.randomUUID === 'undefined') {
+        crypto.randomUUID = () => {
+          return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+          );
+        };
+      }
+      // --- End of Polyfills ---
+
       // --- Start of hooks/useLocalStorage.ts ---
       function useLocalStorage(key, initialValue) {
         const [storedValue, setStoredValue] = useState(() => {
@@ -62,8 +74,11 @@
 
       // --- Start of services/geminiService.ts ---
       let ai = null;
-      if (process.env.API_KEY) {
+      // Safely check for process.env.API_KEY to prevent crashing in browser
+      if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
           ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      } else {
+        console.warn("Gemini AI API key not found. AI features will be disabled.");
       }
 
       const nutritionSchema = {
@@ -206,6 +221,10 @@
       // --- Start of components/Calendar.tsx ---
       const Calendar = ({ selectedDate, onDateChange, markedDates = {} }) => {
         const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+
+        useEffect(() => {
+          setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+        }, [selectedDate]);
 
         const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
